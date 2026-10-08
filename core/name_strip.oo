@@ -1,0 +1,65 @@
+// # oobasename Path Stripping Engine
+//
+// Logline: Strips directory prefixes, trailing slashes, and optional suffixes from file paths.
+//
+// Setup: Pure algorithmic string processing adhering strictly to POSIX basename specification.
+//
+// Beats:
+//   1. Strip redundant trailing path separators while preserving root slash.
+//   2. Isolate terminal filename component following the final directory separator.
+//   3. Remove trailing file extension or custom suffix when matched.
+
+pub fn strip_path(path: String, suffix: String) -> String {
+    let raw_len: Int = chars_len(path);
+    if raw_len == 0 {
+        return "";
+    }
+
+    let mut p: String = path;
+    let mut p_len: Int = chars_len(p);
+    while p_len > 1 && str_ends_with(p, "/") {
+        p = str_slice(p, 0, p_len - 1);
+        p_len = chars_len(p);
+    }
+
+    if p == "/" {
+        return "/";
+    }
+
+    let n: Int = chars_len(p);
+    let mut last_slash: Int = -1;
+    let mut i: Int = 0;
+    while i < n {
+        if char_at(p, i) == "/" {
+            last_slash = i;
+        }
+        i = i + 1;
+    }
+
+    let mut base: String = if last_slash >= 0 {
+        str_slice(p, last_slash + 1, n)
+    } else {
+        p
+    };
+
+    let s_len: Int = chars_len(suffix);
+    let b_len: Int = chars_len(base);
+    if s_len > 0 && b_len > s_len && str_ends_with(base, suffix) {
+        base = str_slice(base, 0, b_len - s_len);
+    }
+
+    return base;
+}
+
+pub fn strip_paths(paths: List[String], suffix: String) -> List[String] {
+    let mut out: List[String] = list_new();
+    let n: Int = list_len(paths);
+    let mut i: Int = 0;
+    while i < n {
+        let p: String = list_get(paths, i);
+        let res: String = strip_path(p, suffix);
+        out = list_push(out, res);
+        i = i + 1;
+    }
+    return out;
+}

@@ -1,0 +1,84 @@
+// # oobasename CLI Options Parser
+//
+// Logline: Ingests command line arguments into typed basename execution options.
+//
+// Setup: Pure argument decoding supporting POSIX basename and GNU coreutils flags.
+//
+// Beats:
+//   1. Define NameOpts data structure covering path list and suffix options.
+//   2. Extract flags for suffix stripping, multiple paths, and zero-termination.
+//   3. Separate path arguments from legacy trailing suffix operand.
+
+pub type NameOpts = struct {
+    action: String,
+    paths: List[String],
+    suffix: String,
+    multiple: Bool,
+    zero_terminated: Bool,
+    json_mode: Bool
+};
+
+pub fn default_name_opts() -> NameOpts {
+    return NameOpts {
+        action: "run",
+        paths: list_new(),
+        suffix: "",
+        multiple: false,
+        zero_terminated: false,
+        json_mode: false
+    };
+}
+
+pub fn parse_name_args(args: List[String]) -> NameOpts {
+    let mut opts: NameOpts = default_name_opts();
+    let n: Int = list_len(args);
+    let mut i: Int = 0;
+    let mut positionals: List[String] = list_new();
+
+    while i < n {
+        let arg: String = list_get(args, i);
+        if arg == "-h" || arg == "--help" {
+            opts.action = "help";
+            return opts;
+        } else if arg == "-v" || arg == "--version" {
+            opts.action = "version";
+            return opts;
+        } else if arg == "--mcp" {
+            opts.action = "mcp";
+            return opts;
+        } else if arg == "--json" {
+            opts.json_mode = true;
+        } else if arg == "-a" || arg == "--multiple" {
+            opts.multiple = true;
+        } else if arg == "-z" || arg == "--zero" {
+            opts.zero_terminated = true;
+        } else if arg == "-s" || arg == "--suffix" {
+            opts.multiple = true;
+            if i + 1 < n {
+                i = i + 1;
+                opts.suffix = list_get(args, i);
+            }
+        } else if !str_starts_with(arg, "-") {
+            positionals = list_push(positionals, arg);
+        }
+        i = i + 1;
+    }
+
+    let p_len: Int = list_len(positionals);
+    if opts.multiple {
+        let mut j: Int = 0;
+        while j < p_len {
+            opts.paths = list_push(opts.paths, list_get(positionals, j));
+            j = j + 1;
+        }
+    } else {
+        if p_len >= 1 {
+            opts.paths = list_push(opts.paths, list_get(positionals, 0));
+        }
+        if p_len >= 2 && chars_len(opts.suffix) == 0 {
+            opts.suffix = list_get(positionals, 1);
+        }
+    }
+
+    return opts;
+}

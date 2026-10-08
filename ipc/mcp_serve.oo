@@ -1,0 +1,88 @@
+// # Model Context Protocol (MCP) Stdio Server for oobasename
+//
+// Logline: JSON-RPC 2.0 stdio server providing path stripping and suffix removal tools.
+//
+// Setup: Demands FsReadCap for stdio streaming. Operates without ambient authority.
+//
+// Beats:
+//   1. Ingest JSON-RPC 2.0 frames over stdin and dispatch RPC methods.
+//   2. Advertise basename stripping and batch path processing tools.
+//   3. Execute capability-bounded path transformations and stream JSON responses.
+
+import "core/name_strip.oo";
+import "render/name_theme.oo";
+import "ipc/json_field.oo";
+
+pub fn run_mcp_server(fs: &FsReadCap) {
+    let mut running: Bool = true;
+    while running {
+        let line_res: Result[String, String] = oo_read_stdin_chunk(fs, 8192);
+        if !line_res.is_ok() {
+            running = false;
+        } else {
+            let line: String = match line_res { Ok(s) => s, Err(_) => "" };
+            let trimmed: String = str_trim(line);
+            if chars_len(trimmed) == 0 {
+                running = false;
+            } else {
+                let id: String = json_get_field(trimmed, "id");
+                let method: String = json_get_string(trimmed, "method");
+
+                if method == "initialize" {
+                    let resp: String = "{\"jsonrpc\":\"2.0\",\"id\":" + id +
+                        ",\"result\":{\"protocolVersion\":\"2024-11-05\"," +
+                        "\"serverInfo\":{\"name\":\"oobasename\",\"version\":\"0.2.0\"}," +
+                        "\"capabilities\":{\"tools\":{}}}}";
+                    println(resp);
+                } else if method == "notifications/initialized" {
+                    // Ack
+                } else if method == "tools/list" {
+                    let t1: String = "{\"name\":\"basename_strip\",\"description\":\"Strip directory prefix and optional suffix from path\"," +
+                        "\"inputSchema\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"suffix\":{\"type\":\"string\"}},\"required\":[\"path\"]}}";
+                    let t2: String = "{\"name\":\"basename_batch\",\"description\":\"Strip directory prefixes from an array of paths\"," +
+                        "\"inputSchema\":{\"type\":\"object\",\"properties\":{\"paths\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"suffix\":{\"type\":\"string\"}},\"required\":[\"paths\"]}}";
+                    let t3: String = "{\"name\":\"basename_stats\",\"description\":\"Query oobasename engine specifications\"," +
+                        "\"inputSchema\":{\"type\":\"object\",\"properties\":{}}}";
+                    let resp: String = "{\"jsonrpc\":\"2.0\",\"id\":" + id +
+                        ",\"result\":{\"tools\":[" + t1 + "," + t2 + "," + t3 + "]}}";
+                    println(resp);
+                } else if method == "tools/call" {
+                    let params: String = json_get_field(trimmed, "params");
+                    let tool_name: String = json_get_string(params, "name");
+                    let args: String = json_get_field(params, "arguments");
+
+                    if tool_name == "basename_strip" {
+                        let path_in: String = json_get_string(args, "path");
+                        let suffix_in: String = json_get_string(args, "suffix");
+                        let base: String = strip_path(path_in, suffix_in);
+                        let j: String = render_basename_json(path_in, base, suffix_in);
+                        let resp: String = "{\"jsonrpc\":\"2.0\",\"id\":" + id +
+                            ",\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"" + json_escape_string(j) + "\"}]}}";
+                        println(resp);
+                    } else if tool_name == "basename_batch" {
+                        let paths_in: List[String] = json_get_string_array(args, "paths");
+                        let suffix_in: String = json_get_string(args, "suffix");
+                        let bases: List[String] = strip_paths(paths_in, suffix_in);
+                        let j: String = render_batch_json(paths_in, bases, suffix_in);
+                        let resp: String = "{\"jsonrpc\":\"2.0\",\"id\":" + id +
+                            ",\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"" + json_escape_string(j) + "\"}]}}";
+                        println(resp);
+                    } else if tool_name == "basename_stats" {
+                        let j: String = "{\"engine\":\"oobasename\",\"version\":\"0.2.0\",\"pure_native\":true,\"spec\":\"POSIX basename\"}";
+                        let resp: String = "{\"jsonrpc\":\"2.0\",\"id\":" + id +
+                            ",\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"" + json_escape_string(j) + "\"}]}}";
+                        println(resp);
+                    } else {
+                        let resp: String = "{\"jsonrpc\":\"2.0\",\"id\":" + id +
+                            ",\"error\":{\"code\":-32601,\"message\":\"Method not found\"}}";
+                        println(resp);
+                    }
+                } else {
+                    let resp: String = "{\"jsonrpc\":\"2.0\",\"id\":" + id +
+                        ",\"error\":{\"code\":-32601,\"message\":\"Method not found\"}}";
+                    println(resp);
+                }
+            }
+        }
+    }
+}

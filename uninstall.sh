@@ -4,7 +4,7 @@
 # "Removes oobasename binary, package installations, and cache."
 #
 # Usage:
-#   curl -fsSL https://openooda-toobasename.github.io/oobasename/uninstall.sh | bash
+#   curl -fsSL https://openooda-tools.github.io/oobasename/uninstall.sh | bash
 #   or: ./uninstall.sh [options]
 #
 # Options:

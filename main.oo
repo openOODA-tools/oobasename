@@ -1,4 +1,4 @@
-// # oobasename Main Entry Point
+// # oobasename Main Entry Point - Sovereign Path Stripper
 //
 // Logline: Strips directory prefixes and optional file extensions from path strings.
 //
@@ -6,47 +6,77 @@
 //
 // Beats:
 //   1. Parse command-line options and dispatch --help, --version, or --mcp.
-//   2. Execute capability-bounded oobasename operations.
-//   3. Format and output structured results to standard output.
+//   2. Ingest path operands from arguments and apply suffix stripping.
+//   3. Dispatch path transformations and output plain, NUL-terminated, or JSON text.
+
+import "core/name_strip.oo";
+import "render/name_theme.oo";
+import "ipc/name_opts.oo";
+import "ipc/mcp_serve.oo";
 
 fn render_help() -> String {
-    return "oobasename 0.1.0 (openOODA sovereign files & navigation)\n"
-        + "usage: oobasename [options] [ARGUMENTS]...\n\n"
+    return "oobasename 0.2.0 (openOODA sovereign path & string)\n"
+        + "usage: oobasename [options] NAME [SUFFIX]\n"
+        + "   or: oobasename [options] -a NAME...\n\n"
         + "Strips directory prefixes and optional file extensions from path strings.\n\n"
         + "Options:\n"
         + "  -h, --help           display this help and exit\n"
         + "  -v, --version        output version information and exit\n"
+        + "  -a, --multiple       support multiple arguments and treat each as a NAME\n"
+        + "  -s, --suffix SUFFIX  remove a trailing SUFFIX; implies -a\n"
+        + "  -z, --zero           end each output line with NUL, not newline\n"
         + "      --json           output formatted as JSON Lines\n"
-        + "      --color <WHEN>   colorize output: auto, always, never [default: auto]\n"
-        + "      --theme <NAME>   override active oote palette\n"
         + "      --mcp            run as Model Context Protocol stdio server\n";
 }
 
-fn render_version() -> String {
-    return "oobasename 0.1.0 (openOODA sovereign files & navigation)\n";
-}
+pub fn main(
+    fs: &FsReadCap,
+    proc_cap: &ProcessCap,
+    env: &EnvCap,
+    args: List[String]
+) -> Result[Int, String] {
+    let opts: NameOpts = parse_name_args(args);
 
-fn main(args: List[String]) -> Int {
-    let num_args: Int = list_len(args);
+    if opts.action == "help" {
+        print(render_help());
+        return Ok(0);
+    }
+    if opts.action == "version" {
+        println("oobasename 0.2.0 (openOODA sovereign path & string)");
+        return Ok(0);
+    }
+    if opts.action == "mcp" {
+        run_mcp_server(fs);
+        return Ok(0);
+    }
+
+    let num_paths: Int = list_len(opts.paths);
+    if num_paths == 0 {
+        println("oobasename: missing operand");
+        println("Try 'oobasename --help' for more information.");
+        return Ok(1);
+    }
+
+    let bases: List[String] = strip_paths(opts.paths, opts.suffix);
+
+    if opts.json_mode {
+        if num_paths == 1 {
+            let single_p: String = list_get(opts.paths, 0);
+            let single_b: String = list_get(bases, 0);
+            println(render_basename_json(single_p, single_b, opts.suffix));
+        } else {
+            println(render_batch_json(opts.paths, bases, opts.suffix));
+        }
+        return Ok(0);
+    }
+
+    let delim: String = if opts.zero_terminated { "\x00" } else { "\n" };
     let mut i: Int = 0;
-
-    while i < num_args {
-        let arg: String = list_get(args, i);
-        if arg == "-h" || arg == "--help" {
-            print(render_help());
-            return 0;
-        }
-        if arg == "-v" || arg == "--version" {
-            print(render_version());
-            return 0;
-        }
-        if arg == "--mcp" {
-            print("{\"jsonrpc\":\"2.0\",\"result\":{\"status\":\"ready\",\"tool\":\"oobasename\"}}\n");
-            return 0;
-        }
+    while i < num_paths {
+        let b: String = list_get(bases, i);
+        print(b + delim);
         i = i + 1;
     }
 
-    print("oobasename: sovereign capability-bounded utility ready\n");
-    return 0;
+    return Ok(0);
 }

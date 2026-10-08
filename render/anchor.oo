@@ -1,0 +1,20 @@
+// # oobasename Render Subsystem Anchor
+//
+// Logline: Consolidates terminal colorizers, status visualizers, and JSON serializers.
+//
+// Setup: Root barrel shim for basename output rendering and formatting domain.
+//
+// Beats:
+//   1. Re-export ANSI color styles and text formatting primitives.
+//   2. Re-export JSON serializers for single path operations.
+//   3. Re-export JSON serializers for batch path operations.
+
+import "render/name_theme.oo";
+
+pub fn render_subsystem_version() -> String {
+    return "0.2.0";
+}
+
+pub fn render_subsystem_description() -> String {
+    return "oobasename pure openOODA render subsystem";
+}

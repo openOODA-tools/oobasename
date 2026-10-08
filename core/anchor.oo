@@ -1,0 +1,20 @@
+// # oobasename Core Subsystem Anchor
+//
+// Logline: Consolidates POSIX path stripping, suffix removal, and batch execution engines.
+//
+// Setup: Root barrel shim for core path transformation domain.
+//
+// Beats:
+//   1. Re-export single path component stripper.
+//   2. Re-export batch path component collection processor.
+//   3. Provide core subsystem version identification.
+
+import "core/name_strip.oo";
+
+pub fn core_subsystem_version() -> String {
+    return "0.2.0";
+}
+
+pub fn core_subsystem_description() -> String {
+    return "oobasename pure openOODA core path stripper subsystem";
+}

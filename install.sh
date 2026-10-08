@@ -4,7 +4,7 @@
 # "Strips directory prefixes and optional file extensions from path strings."
 #
 # Usage:
-#   curl -fsSL https://openooda-toobasename.github.io/oobasename/install.sh | bash
+#   curl -fsSL https://openooda-tools.github.io/oobasename/install.sh | bash
 #
 # Options:
 #   --prefix <dir>       Installation directory (default: /usr/local/bin or ~/.local/bin)
@@ -18,10 +18,10 @@
 
 set -eu
 
-REPO="openOODA-toobasename/oobasename"
+REPO="openOODA-tools/oobasename"
 GITHUB_URL="https://github.com/${REPO}"
-VERSION_PIN="v0.1.0"
-RAW_VERSION="0.1.0"
+VERSION_PIN="v0.2.0"
+RAW_VERSION="0.2.0"
 
 if [ -t 1 ] && [ "${NO_COLOR:-}" = "" ] && [ "${TERM:-dumb}" != "dumb" ]; then
     CYAN="\033[38;5;51m"
